@@ -9,7 +9,7 @@ using System.Configuration;
 using System.Net;
 using System.IO;
 using MIL.Html;
-using OMSZ.BLL;
+using OMSZ.App;
 using System.Globalization;
 
 namespace OMSZ

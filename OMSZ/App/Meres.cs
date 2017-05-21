@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace OMSZ.BLL
+namespace OMSZ.App
 {
     public class Meres
     {
