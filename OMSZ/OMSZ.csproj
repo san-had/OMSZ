@@ -54,7 +54,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App\AppMain.cs" />
-    <Compile Include="App\Meres.cs" />
+    <Compile Include="App\Helper.cs" />
+    <Compile Include="Model\Meres.cs" />
+    <Compile Include="Model\ViewModel.cs" />
     <Compile Include="UI\Form1.cs">
       <SubType>Form</SubType>
     </Compile>
