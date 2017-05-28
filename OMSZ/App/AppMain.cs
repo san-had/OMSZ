@@ -6,7 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using MIL.Html;
-using System.Windows.Forms;
+//using System.Windows.Forms;
 using OMSZ.App.Model;
 using System.Drawing;
 
@@ -18,11 +18,6 @@ namespace OMSZ.App
         private string email;
         private string proxy;
         private string userId, password, Domain;
-
-        //private void Main()
-        //{
-        //    Init();
-        //}
 
         public AppMain()
         {
@@ -55,74 +50,41 @@ namespace OMSZ.App
         }
 
         private string FetchWebPage()
-        {
-            HttpWebResponse response = null;
-            // used to build entire input
+        {            
             StringBuilder sb = new StringBuilder();
-
-            // used on each read operation
             byte[] buf = new byte[8192];
-
-
-            // prepare the web page we will be asking for            
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
-            if (CheckIpAddress())
+            if (Helper.CheckIpAddress())
             {
                 request.PreAuthenticate = true;
                 WebProxy Proxy = new WebProxy(proxy, true);
                 Proxy.Credentials = new NetworkCredential(userId, password, Domain);
-
                 request.Proxy = Proxy;
-                //request.ProtocolVersion. = 1;
-                //request.ProtocolVersion.Minor = 0;
             }
 
-            try
-            {
-                // execute the request
-                response = (HttpWebResponse)request.GetResponse();
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show("Hiba! " + e.Message);
-            }
-
-            // we will read data via the response stream
-            Stream resStream = response.GetResponseStream();
-
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            Stream responseStream = response.GetResponseStream();
 
             string tempString = null;
             int count = 0;
-
             do
             {
-                // fill the buffer with data
-                count = resStream.Read(buf, 0, buf.Length);
-
-                // make sure we read some data
+                count = responseStream.Read(buf, 0, buf.Length);
                 if (count != 0)
                 {
-                    // translate from bytes to ASCII text
                     tempString = Encoding.UTF8.GetString(buf, 0, count);
-
-                    // continue building the string
                     sb.Append(tempString);
                 }
             }
-            while (count > 0); // any more data to read?
-
-            // print out page source
-            //Console.WriteLine(sb.ToString());
+            while (count > 0);
             return sb.ToString();
         }
 
-        private List<Meres> GetData(string html)
+        private HtmlDocument PreProcessHtml(string html)
         {
-            List<Meres> MeresList = new List<Meres>();
-
             if (html.Equals(string.Empty))
-                return MeresList;
+                throw new InvalidDataException("Raw html response is empty");
 
             html = html.Replace("rbg1", "rbg0");
             html = html.Replace("T rbg0", "rbg0");
@@ -133,14 +95,20 @@ namespace OMSZ.App
             html = html.Replace("H rbg0", "rbg0");
             html = html.Replace("R rbg0", "rbg0");
 
-            MIL.Html.HtmlDocument mDocument = MIL.Html.HtmlDocument.Create(html, false);
+            return HtmlDocument.Create(html, false);
+        }
+
+        private List<Meres> ParseHtmlData(string html)
+        {
+            List<Meres> MeresList = new List<Meres>();
+
+            HtmlDocument mDocument = PreProcessHtml(html);
             HtmlNodeCollection tdcoll = mDocument.Nodes.FindByAttributeNameValue("class", "rbg0", true);
 
             List<DateTime> dateList = GetDateTimeList(mDocument);
 
             int index = 0;
             int rowIndex = 0;
-            string idopont = String.Empty;
             string homerseklet = String.Empty;
             string legnyomas = String.Empty;
             string szelirany = String.Empty;
@@ -173,19 +141,21 @@ namespace OMSZ.App
                 "-"
             };
 
+            const int ROW_DATA_LENGTH = 9;
+
             foreach (MIL.Html.HtmlElement td in tdcoll)    //td értékek
             {
-                if (index % 9 == 0)
+                if (index % ROW_DATA_LENGTH == 0)
                 {
                     // in UTC
                     dte = dateList[rowIndex];
                     rowIndex++;
                 }
-                if (index % 9 == 1)
+                if (index % ROW_DATA_LENGTH == 1)
                 {
                     homerseklet = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                 }
-                if (index % 9 == 3)
+                if (index % ROW_DATA_LENGTH == 3)
                 {
                     string htmlText = td.Attributes.FindByName("onmouseover").Value;
                     string[] splitchars = { "<br>" };
@@ -193,24 +163,24 @@ namespace OMSZ.App
                     szelirany = tmp[1];
                 }
 
-                if (index % 9 == 4)
+                if (index % ROW_DATA_LENGTH == 4)
                 {
                     szelsebesseg = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                 }
 
-                if (index % 9 == 6)
+                if (index % ROW_DATA_LENGTH == 6)
                 {
                     legnyomas = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                 }
 
-                if (index % 9 == 8)
+                if (index % ROW_DATA_LENGTH == 8)
                 {
                     csapadek = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                     csapadek = csapadek.Replace('.', ',');
                     csapadek = csapadek.Replace("-", "0,0");
                 }
 
-                if (index % 9 == 8)
+                if (index % ROW_DATA_LENGTH == 8)
                 {
                     Meres meres = new Meres();
                     meres.Datum = dte;
@@ -234,9 +204,16 @@ namespace OMSZ.App
             return MeresList;
         }
 
+        private List<Meres> GetData(string html)
+        {
+            List<Meres> MeresList = ParseHtmlData(html);
+
+            return MeresList;
+        }
+
         #region Getting DateTime
 
-        private static List<DateTime> GetDateTimeList(MIL.Html.HtmlDocument mDocument)
+        private static List<DateTime> GetDateTimeList(HtmlDocument mDocument)
         {
             List<DateTime> dateTimeList = new List<DateTime>();
 
@@ -246,7 +223,7 @@ namespace OMSZ.App
 
             foreach (var option in optionColl)
             {
-                if (TryParseDateTime((option as MIL.Html.HtmlElement).Text, out convertedDateTime))
+                if (TryParseDateTime((option as HtmlElement).Text, out convertedDateTime))
                 {
                     dateTimeList.Add(convertedDateTime);
                 }
@@ -318,38 +295,7 @@ namespace OMSZ.App
                     ido0 = Now.Hour.ToString();
 
                 string ido = ido0 + ":00";
-                //lblPressure.Text = MeresList[0].Legnyomas.ToString();
-                //lblTemp.Text = MeresList[0].Homerseklet.ToString();
-                //lblTime.Text = ido;
 
-                //int dp = MeresList[0].Legnyomas - MeresList[1].Legnyomas;
-                //int dt = MeresList[0].Homerseklet - MeresList[1].Homerseklet;
-                //lblDP.Text = dp.ToString();
-                //lblDT.Text = dt.ToString();
-
-                //if (dp > 0)
-                //    lblDP.ForeColor = Color.Blue;
-
-                //if (dp == 0)
-                //    lblDP.ForeColor = Color.Black;
-
-                //if (dp < 0)
-                //    lblDP.ForeColor = Color.Red;
-
-                //if (dt > 0)
-                //    lblDT.ForeColor = Color.Red;
-
-                //if (dt == 0)
-                //    lblDT.ForeColor = Color.Black;
-
-                //if (dt < 0)
-                //    lblDT.ForeColor = Color.Blue;
-
-                //lblSzelirany.Text = MeresList[0].Szelirany;
-                //lblSzelsebesseg.Text = MeresList[0].Szelsebesseg.ToString();
-
-                //this.Text = String.Format("{0} {1} {2}", lblPressure.Text, lblTemp.Text, ido);
-                ////this.Text = String.Format( "{0}:{1}", DateTime.Now.Hour, DateTime.Now.Minute );
 
                 viewModel.Pressure = MeresList[0].Legnyomas;
                 viewModel.Temperature = MeresList[0].Homerseklet;
@@ -382,21 +328,6 @@ namespace OMSZ.App
                 viewModel.FormTitle = String.Format("{0} {1} {2}", viewModel.Pressure.ToString(), viewModel.Temperature.ToString(), ido);
             }
             return viewModel;
-        }
-
-        private bool CheckIpAddress()
-        {
-            bool proxy = true;
-            string strHostName = Dns.GetHostName();
-
-            IPHostEntry ipEntry = Dns.GetHostEntry(strHostName);
-            IPAddress[] addr = ipEntry.AddressList;
-
-            if (addr[0].ToString().StartsWith("192"))   //Home use
-                proxy = false;
-
-            //return proxy;
-            return false;
         }
     }
 }
