@@ -18,18 +18,6 @@ namespace OMSZ.App
 
     public static class Helper
     {
-        public static bool CheckIpAddress()
-        {
-            bool proxy = true;
-            string strHostName = Dns.GetHostName();
-
-            IPHostEntry ipEntry = Dns.GetHostEntry(strHostName);
-            IPAddress[] addr = ipEntry.AddressList;
-
-            if (addr[0].ToString().StartsWith("192"))   //Home use
-                proxy = false;
-
-            return proxy;
-        }
+ 
     }
 }

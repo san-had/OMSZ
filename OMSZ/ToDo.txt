@@ -1,0 +1,21 @@
+﻿
+	- Create the original lookout first
+- Write an integration test for the normal operation
+- Write an integration test for the wrong data operation
+- Fix the code for the wrong data operation
+- Think over which unit tests are necessary
+- Write those unit tests and refactor the code accordingly
+- Add the new feature tests to the code
+- Implement new feature code
+
+
+Bug fix
+-------
+When input data contains invalid data programs should not throw exception.
+
+Enhancement
+-----------
+When input data contains invalid data programs should display the previous value with greyed color.
+
+- Add automatic test running at build. (Both debug and release)
+- Add automatic deployment at release build.

@@ -17,6 +17,7 @@ namespace OMSZ.App
     {
         private string url;
         private string email;
+        private bool useProxy;
         private string proxy;
         private string userId, password, Domain;
 
@@ -29,6 +30,7 @@ namespace OMSZ.App
         {
             url = "http://www.met.hu/idojaras/aktualis_idojaras/mert_adatok/main.php?vn=0&v=Budapest&c=tablazat&ful=hom";
             email = ConfigurationManager.AppSettings["Email"];
+            useProxy = Convert.ToBoolean(ConfigurationManager.AppSettings["UseProxy"]);
             proxy = ConfigurationManager.AppSettings["Proxy"];
             userId = ConfigurationManager.AppSettings["UserId"];
             password = ConfigurationManager.AppSettings["Password"];
@@ -56,13 +58,13 @@ namespace OMSZ.App
             byte[] buf = new byte[8192];
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
-            //if (Helper.CheckIpAddress())
-            //{
-            //    request.PreAuthenticate = true;
-            //    WebProxy Proxy = new WebProxy(proxy, true);
-            //    Proxy.Credentials = new NetworkCredential(userId, password, Domain);
-            //    request.Proxy = Proxy;
-            //}
+            if (useProxy)
+            {
+                request.PreAuthenticate = true;
+                WebProxy Proxy = new WebProxy(proxy, true);
+                Proxy.Credentials = new NetworkCredential(userId, password, Domain);
+                request.Proxy = Proxy;
+            }
 
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
             Stream responseStream = response.GetResponseStream();
@@ -113,64 +115,67 @@ namespace OMSZ.App
             int index = 0;
             int rowIndex = 0;
 
-            var rawMeres = new RawMeres();
+            string homerseklet = String.Empty;
+            string legnyomas = String.Empty;
+            string szelirany = String.Empty;
+            string szelsebesseg = String.Empty;
+            string csapadek = String.Empty;
+            DateTime datum = DateTime.Now;            
 
             foreach (MIL.Html.HtmlElement td in tdcoll)    //td értékek
             {
                 if (index % ROW_DATA_LENGTH == 0)
                 {
                     // in UTC
-                    rawMeres.Datum = dateList[rowIndex];
+                    datum = dateList[rowIndex];
                     rowIndex++;
                 }
                 if (index % ROW_DATA_LENGTH == 1)
                 {
-                    rawMeres.Homerseklet = ((MIL.Html.HtmlElement)td.FirstChild).Text;
+                    homerseklet = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                 }
                 if (index % ROW_DATA_LENGTH == 3)
                 {
                     string htmlText = td.Attributes.FindByName("onmouseover").Value;
                     string[] splitchars = { "<br>" };
                     string[] tmp = htmlText.Split(splitchars, StringSplitOptions.None);
-                    rawMeres.Szelirany = tmp[1];
+                    szelirany = tmp[1];
                 }
 
                 if (index % ROW_DATA_LENGTH == 4)
                 {
-                    rawMeres.Szelsebesseg = ((MIL.Html.HtmlElement)td.FirstChild).Text;
+                    szelsebesseg = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                 }
 
                 if (index % ROW_DATA_LENGTH == 6)
                 {
-                    rawMeres.Legnyomas = ((MIL.Html.HtmlElement)td.FirstChild).Text;
+                    legnyomas = ((MIL.Html.HtmlElement)td.FirstChild).Text;
                 }
 
                 if (index % ROW_DATA_LENGTH == 8)
                 {
-                    rawMeres.Csapadek = ((MIL.Html.HtmlElement)td.FirstChild).Text;
-                    rawMeres.Csapadek = rawMeres.Csapadek.Replace('.', ',');
-                    rawMeres.Csapadek = rawMeres.Csapadek.Replace("-", "0,0");
+                    csapadek = ((MIL.Html.HtmlElement)td.FirstChild).Text;
+                    csapadek = csapadek.Replace('.', ',');
+                    csapadek = csapadek.Replace("-", "0,0");
                 }
 
                 if (index % ROW_DATA_LENGTH == 8)
                 {
-                    //Meres meres = new Meres();
-                    //meres.Datum = dte;
-                    //try
-                    //{
-                    //    meres.Homerseklet = Convert.ToInt32(homerseklet);
-                    //    meres.Legnyomas = Convert.ToInt32(legnyomas);
-                    //    int szelindex = szeliranyok.IndexOf(szelirany.Trim());
-                    //    meres.Szelirany = szelindex > -1 ? szeliranyok2[szelindex] : " - ";
-                    //    meres.Szelsebesseg = Convert.ToInt32(szelsebesseg);
-                    //    meres.Csapadek = Convert.ToDouble(csapadek);
-                    //    MeresList.Add(meres);
-                    //}
-                    //catch
-                    //{
-                    //    continue;
-                    //}
-                    MeresList.Add(rawMeres);
+                    var rawMeres = new RawMeres();
+                    rawMeres.Datum = datum;
+                    try
+                    {
+                        rawMeres.Homerseklet = homerseklet;
+                        rawMeres.Legnyomas = legnyomas;
+                        rawMeres.Szelirany = szelirany;
+                        rawMeres.Szelsebesseg = szelsebesseg;
+                        rawMeres.Csapadek = csapadek;
+                        MeresList.Add(rawMeres);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
                 }
                 index++;
             }

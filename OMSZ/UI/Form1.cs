@@ -29,6 +29,7 @@ namespace OMSZ
             lblTemp.Text = viewModel.Temperature.ToString();
             lblSzelirany.Text = viewModel.WindDirection;
             lblSzelsebesseg.Text = viewModel.WindSpeed.ToString();
+            lblTime.Text = viewModel.Time;
             lblDP.Text = viewModel.DeltaPressure.ToString();
             lblDT.Text = viewModel.DeltaTemperature.ToString();
             lblDP.ForeColor = viewModel.DeltaPressureColor;
