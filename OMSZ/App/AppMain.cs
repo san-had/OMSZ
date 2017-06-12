@@ -15,20 +15,26 @@ namespace OMSZ.App
 {
     public class AppMain
     {
-        private string url;
+        private static string url = "http://www.met.hu/idojaras/aktualis_idojaras/mert_adatok/main.php?vn=0&v=Budapest&c=tablazat&ful=hom";
         private string email;
         private bool useProxy;
         private string proxy;
         private string userId, password, Domain;
 
-        public AppMain()
+        private IRepository _repository;
+
+        public AppMain() 
+            : this( new Repository(url))
+        { }
+
+        public AppMain(IRepository repository)
         {
-            Init();
+            _repository = repository;
+            Init();            
         }
         
         private void Init()
         {
-            url = "http://www.met.hu/idojaras/aktualis_idojaras/mert_adatok/main.php?vn=0&v=Budapest&c=tablazat&ful=hom";
             email = ConfigurationManager.AppSettings["Email"];
             useProxy = Convert.ToBoolean(ConfigurationManager.AppSettings["UseProxy"]);
             proxy = ConfigurationManager.AppSettings["Proxy"];
@@ -37,52 +43,52 @@ namespace OMSZ.App
             Domain = ConfigurationManager.AppSettings["Domain"];
         }
 
-        private string OpenFile(string fileName)
-        {
-            string html = string.Empty;
-            using (StreamReader sr = new StreamReader(fileName, System.Text.Encoding.UTF8))
-            {
-                html = sr.ReadToEnd();
-                sr.Close();
-            }
-            if (html == string.Empty)
-            {
-                Console.WriteLine("Nothing in the file");
-            }
-            return html;
-        }
+        //private string OpenFile(string fileName)
+        //{
+        //    string html = string.Empty;
+        //    using (StreamReader sr = new StreamReader(fileName, System.Text.Encoding.UTF8))
+        //    {
+        //        html = sr.ReadToEnd();
+        //        sr.Close();
+        //    }
+        //    if (html == string.Empty)
+        //    {
+        //        Console.WriteLine("Nothing in the file");
+        //    }
+        //    return html;
+        //}
 
-        private string FetchWebPage()
-        {            
-            StringBuilder sb = new StringBuilder();
-            byte[] buf = new byte[8192];
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+        //public string GetWebContent(string p_url)
+        //{            
+        //    StringBuilder sb = new StringBuilder();
+        //    byte[] buf = new byte[8192];
+        //    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(p_url);
 
-            if (useProxy)
-            {
-                request.PreAuthenticate = true;
-                WebProxy Proxy = new WebProxy(proxy, true);
-                Proxy.Credentials = new NetworkCredential(userId, password, Domain);
-                request.Proxy = Proxy;
-            }
+        //    if (useProxy)
+        //    {
+        //        request.PreAuthenticate = true;
+        //        WebProxy Proxy = new WebProxy(proxy, true);
+        //        Proxy.Credentials = new NetworkCredential(userId, password, Domain);
+        //        request.Proxy = Proxy;
+        //    }
 
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            Stream responseStream = response.GetResponseStream();
+        //    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+        //    Stream responseStream = response.GetResponseStream();
 
-            string tempString = null;
-            int count = 0;
-            do
-            {
-                count = responseStream.Read(buf, 0, buf.Length);
-                if (count != 0)
-                {
-                    tempString = Encoding.UTF8.GetString(buf, 0, count);
-                    sb.Append(tempString);
-                }
-            }
-            while (count > 0);
-            return sb.ToString();
-        }
+        //    string tempString = null;
+        //    int count = 0;
+        //    do
+        //    {
+        //        count = responseStream.Read(buf, 0, buf.Length);
+        //        if (count != 0)
+        //        {
+        //            tempString = Encoding.UTF8.GetString(buf, 0, count);
+        //            sb.Append(tempString);
+        //        }
+        //    }
+        //    while (count > 0);
+        //    return sb.ToString();
+        //}
 
         private HtmlDocument PreProcessHtml(string html)
         {
@@ -253,8 +259,9 @@ namespace OMSZ.App
         public ViewModel GetViewModel()
         {
             ViewModel viewModel = new ViewModel();
-            //string html = OpenFile(@"D:\Kuka\idojaras3.htm");
-            string html = FetchWebPage();
+            
+            string html = _repository.GetWebContent();
+
             if (!html.Equals(String.Empty))
             {
                 List<RawMeres> RawMeresList = GetData(html);

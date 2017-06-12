@@ -55,6 +55,8 @@
   <ItemGroup>
     <Compile Include="App\AppMain.cs" />
     <Compile Include="App\Helper.cs" />
+    <Compile Include="App\IRepository.cs" />
+    <Compile Include="App\Repository.cs" />
     <Compile Include="Model\Meres.cs" />
     <Compile Include="Model\RowMeres.cs" />
     <Compile Include="Model\ViewModel.cs" />
